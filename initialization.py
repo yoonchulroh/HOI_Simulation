@@ -1,7 +1,7 @@
 import json
-from game_objects import Team, Unit, TeamController
+from game_objects import Team, Unit, TeamController, SimulationController
 
-def load_units_from_json(json_file: str, blue_controller: TeamController, red_controller: TeamController):
+def load_units_from_json(json_file: str, blue_controller: TeamController, red_controller: TeamController, simulation_controller: SimulationController):
     units = []
     """
     Loads unit data from a JSON file and assigns units to the provided team controllers.
@@ -10,7 +10,7 @@ def load_units_from_json(json_file: str, blue_controller: TeamController, red_co
         json_file (str): Path to the JSON file containing unit data.
         blue_controller (TeamController): Controller for the blue team.
         red_controller (TeamController): Controller for the red team.
-
+        simulation_controller (SimulationController): Controller for the simulation.
     Raises:
         ValueError: If the JSON data is missing required keys or contains invalid team values.
     """
@@ -27,7 +27,7 @@ def load_units_from_json(json_file: str, blue_controller: TeamController, red_co
             row = unit_data['row']
             team_str = unit_data['team']
             team = Team(team_str)  # Automatically raises ValueError if team_str is invalid
-            unit = Unit(col, row, team)
+            unit = Unit(col, row, team, simulation_controller)
             if team == Team.BLUE:
                 blue_controller.add_unit(unit)
             elif team == Team.RED:

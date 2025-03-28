@@ -44,9 +44,10 @@ def main():
     # Initialize controllers for both teams
     blue_controller = game_objects.TeamController(game_objects.Team.BLUE)
     red_controller = game_objects.TeamController(game_objects.Team.RED)
+    simulation_controller = game_objects.SimulationController(blue_controller, red_controller)
 
     # Load units from the JSON file and assign them to the controllers
-    units = initialization.load_units_from_json("units.json", blue_controller, red_controller)
+    units = initialization.load_units_from_json("units.json", blue_controller, red_controller, simulation_controller)
 
     while running:
         clock.tick(fps)
