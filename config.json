@@ -1,0 +1,8 @@
+{
+    "window_width": 2000,
+    "window_height": 2000,
+    "fps": 60,
+    "rows": 30,
+    "cols": 30,
+    "hex_size": 40
+}
