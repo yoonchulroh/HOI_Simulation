@@ -1,6 +1,7 @@
 import math
 import pygame
-from game_objects import Team, Unit
+from game_objects import Team, Unit, Tile
+import gamelogic
 
 def hex_corners(center_x, center_y, size):
     """
@@ -28,38 +29,10 @@ def draw_hex(surface, center_x, center_y, size, fill_color, outline_color=(0, 0,
     # Draw outline
     pygame.draw.polygon(surface, outline_color, corners_int, width=1)
 
-def draw_hex_grid(surface, rows, cols, size, font):
-    """
-    Draws a grid (rows x cols) of pointy-top hexes using an "odd-r" horizontal layout.
-    - rows: number of rows
-    - cols: number of columns
-    - size: 'radius' of each hex
-    - font: Pygame font object for rendering coordinates
-    """
-    for row in range(rows):
-        for col in range(cols):
-            offset_x = (math.sqrt(3) * size) * col
-            # Shift every odd row
-            if row % 2 == 1:
-                offset_x += (math.sqrt(3)/2) * size
-
-            offset_y = (1.5 * size) * row
-            center_x = offset_x + size  # + size for padding
-            center_y = offset_y + size
-
-            # Draw the hexagon
-            draw_hex(surface, center_x, center_y, size,
-                     fill_color=(200, 200, 200),  # light gray
-                     outline_color=(0, 0, 0))     # black outline
-
-            # Render and draw the coordinates
-            text = font.render(f"({col}, {row})", True, (0, 0, 0))  # Black text
-            text_rect = text.get_rect(center=(center_x, center_y))
-            surface.blit(text, text_rect)
-
 def get_hex_center(col: int, row: int, size: float) -> tuple[float, float]:
     """
-    Calculates the pixel center of a hex tile given its column, row, and size.
+    Calculates the pixel center of a hex tile given its column, row, and size,
+    using an "odd-r" pointy-top layout.
 
     Args:
         col (int): Column coordinate.
@@ -73,9 +46,34 @@ def get_hex_center(col: int, row: int, size: float) -> tuple[float, float]:
     if row % 2 == 1:  # Offset for odd rows in pointy-top hex grid
         offset_x += (math.sqrt(3) / 2) * size
     offset_y = (1.5 * size) * row
-    center_x = offset_x + size  # Adjust for padding
+    center_x = offset_x + size  # Extra padding
     center_y = offset_y + size
     return center_x, center_y
+
+def draw_tiles(surface: pygame.Surface, tiles: list[list[Tile]], size: float, font: pygame.font.Font) -> None:
+    """
+    Draws a 2D list of Tile objects on the given surface.
+
+    Args:
+        surface (pygame.Surface): The Pygame surface to draw on.
+        tiles (list[list[Tile]]): A 2D list of Tile objects.
+        size (float): Radius of the hex tile.
+        font (pygame.font.Font): Pygame font for rendering the tile coordinates.
+    """
+    for row_of_tiles in tiles:
+        for tile in row_of_tiles:
+            # Determine the hex center based on tile's col and row
+            center_x, center_y = get_hex_center(tile.col, tile.row, size)
+
+            fill_color = tile.get_affiliation_color()
+
+            # Draw the hex
+            draw_hex(surface, center_x, center_y, size, fill_color)
+
+            # Optionally render the coordinates on top
+            text = font.render(f"({tile.col}, {tile.row})", True, (0, 0, 0))
+            text_rect = text.get_rect(center=(center_x, center_y))
+            surface.blit(text, text_rect)
 
 def draw_units(surface: pygame.Surface, units: list[Unit], size: float) -> None:
     """
@@ -90,3 +88,28 @@ def draw_units(surface: pygame.Surface, units: list[Unit], size: float) -> None:
         center_x, center_y = get_hex_center(unit.col, unit.row, size)
         color = (0, 0, 255) if unit.team == Team.BLUE else (255, 0, 0)
         pygame.draw.rect(surface, color, (int(center_x)-int(size/2), int(center_y)-int(size/2), int(size), int(size)))
+
+def render_affiliation_stats(
+    surface: pygame.Surface, 
+    tiles: list[list[Tile]], 
+    font: pygame.font.Font,
+    position: tuple[int, int] = (10, 10)
+):
+    """
+    Renders the affiliation stats (percentages) onto the provided Pygame surface.
+
+    Args:
+        surface (pygame.Surface): The surface to draw on (typically the screen).
+        stats (dict[str, float]): A dictionary like {"blue": 40.0, "red": 35.0, "none": 25.0}.
+        font (pygame.font.Font): A Pygame Font object for rendering text.
+        position (tuple[int, int]): The (x, y) position where text should start.
+    """
+    stats = gamelogic.calculate_tile_affiliation_percentages(tiles)
+
+    text_str = (
+        f"Blue: {stats['blue']:.2f}%  |  "
+        f"Red: {stats['red']:.2f}%  |  "
+        f"None: {stats['none']:.2f}%"
+    )
+    text_surface = font.render(text_str, True, (0, 0, 0))  # Render in black
+    surface.blit(text_surface, position)  # Blit at the specified (x, y)

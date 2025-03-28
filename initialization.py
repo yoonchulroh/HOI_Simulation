@@ -1,5 +1,5 @@
 import json
-from game_objects import Team, Unit, TeamController, SimulationController
+from game_objects import Team, Unit, TeamController, SimulationController, Tile
 
 def load_units_from_json(json_file: str, blue_controller: TeamController, red_controller: TeamController, simulation_controller: SimulationController):
     units = []
@@ -39,3 +39,29 @@ def load_units_from_json(json_file: str, blue_controller: TeamController, red_co
             raise e  # Re-raise ValueError from Team(team_str) or add_unit
         
     return units
+
+def initialize_tiles(config_filename: str) -> list[list[Tile]]:
+    """
+    Loads the config file, reads 'rows' and 'cols', and creates a 2D array of Tile objects.
+
+    Args:
+        config_filename (str): The path to the JSON configuration file.
+
+    Returns:
+        list[list[Tile]]: A 2D list (rows x cols) of Tile objects.
+    """
+    with open(config_filename, 'r') as f:
+        config = json.load(f)
+
+    rows = config["rows"]
+    cols = config["cols"]
+
+    tiles = []
+    for x in range(cols):   # x = horizontal
+        column_tiles = []
+        for y in range(rows):  # y = vertical
+            tile = Tile(col=x, row=y) 
+            column_tiles.append(tile)
+        tiles.append(column_tiles)
+        
+    return tiles

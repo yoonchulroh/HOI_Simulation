@@ -51,3 +51,39 @@ def is_move_valid(unit: "game_objects.Unit", direction: "game_objects.Direction"
 
     # Check if the new position is within grid boundaries
     return 0 <= new_col < cols and 0 <= new_row < rows
+
+def calculate_tile_affiliation_percentages(tiles: list[list["game_objects.Tile"]]) -> dict[str, float]:
+    """
+    Calculates the percentage of tiles affiliated with each team and those with no affiliation.
+    
+    Args:
+        tiles (list[list[Tile]]): A 2D list of Tile objects.
+
+    Returns:
+        dict[str, float]: A dictionary mapping "blue", "red", and "none" to their respective percentages.
+    """
+    total_tiles = 0
+    blue_count = 0
+    red_count = 0
+    
+    for row_of_tiles in tiles:
+        for tile in row_of_tiles:
+            total_tiles += 1
+            if tile.affiliation == game_objects.Team.BLUE:
+                blue_count += 1
+            elif tile.affiliation == game_objects.Team.RED:
+                red_count += 1
+
+    if total_tiles == 0:
+        # Edge case: if there are no tiles at all
+        return {"blue": 0.0, "red": 0.0, "none": 0.0}
+
+    blue_percentage = (blue_count / total_tiles) * 100.0
+    red_percentage = (red_count / total_tiles) * 100.0
+    none_percentage = 100.0 - (blue_percentage + red_percentage)
+
+    return {
+        "blue": blue_percentage,
+        "red": red_percentage,
+        "none": none_percentage
+    }

@@ -44,9 +44,10 @@ def main():
     # Initialize controllers for both teams
     blue_controller = game_objects.TeamController(game_objects.Team.BLUE)
     red_controller = game_objects.TeamController(game_objects.Team.RED)
-    simulation_controller = game_objects.SimulationController(blue_controller, red_controller)
 
     # Load units from the JSON file and assign them to the controllers
+    tiles = initialization.initialize_tiles("config.json")
+    simulation_controller = game_objects.SimulationController(blue_controller, red_controller, tiles)
     units = initialization.load_units_from_json("units.json", blue_controller, red_controller, simulation_controller)
 
     while running:
@@ -61,8 +62,9 @@ def main():
         red_controller.move_units_randomly()  # Moves all red units randomly
 
         # 3) Draw the hex grid with coordinates
-        renderer.draw_hex_grid(screen, rows, cols, hex_size, font)
+        renderer.draw_tiles(screen, tiles, hex_size, font)
         renderer.draw_units(screen, units, hex_size)
+        renderer.render_affiliation_stats(screen, tiles, font, (1500, 1000))
 
         pygame.display.flip()
 
