@@ -1,7 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from controllers import SimulationController, TeamController
 from enum import Enum
-import random
-import json
-import gamelogic
 
 # Define the Team enumeration for blue and red teams
 class Team(Enum):
@@ -16,71 +17,9 @@ class Direction(Enum):
     SW = "southwest"
     NW = "northwest"
 
-class SimulationController:
-    def __init__(self, blue_controller, red_controller, tiles: list[list["Tile"]]):
-        """
-        Initializes the SimulationController with references to the team controllers.
-
-        Args:
-            blue_controller (TeamController): Controller for the blue team.
-            red_controller (TeamController): Controller for the red team.
-        """
-        self.blue_controller = blue_controller
-        self.red_controller = red_controller
-        self.units = []
-        self.tiles = tiles
-        blue_controller.simulation_controller = self
-        red_controller.simulation_controller = self
-        try:
-            with open('config.json', 'r') as f:
-                config = json.load(f)
-            self.rows = config['rows']
-            self.cols = config['cols']
-            if not isinstance(self.rows, int) or not isinstance(self.cols, int) or self.rows <= 0 or self.cols <= 0:
-                raise ValueError("Grid dimensions must be positive integers.")
-        except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
-            raise ValueError(f"Error loading grid dimensions from config.json: {e}")
-
-
-    def add_unit(self, unit: "Unit"):
-        """
-        Adds a unit to the simulation.
-        """
-        self.units.append(unit)
-
-    def move_unit(self, unit: "Unit", direction: Direction):
-        if not gamelogic.is_move_valid(unit, direction, self.rows, self.cols):
-            return
-
-        if unit.row % 2 == 0:  # Even row
-            offsets = {
-                Direction.W: (-1, 0),
-                Direction.NE: (0, -1),
-                Direction.SE: (0, 1),
-                Direction.E: (1, 0),
-                Direction.SW: (-1, 1),
-                Direction.NW: (-1, -1)
-            }
-        else:  # Odd row
-            offsets = {
-                Direction.W: (-1, 0),
-                Direction.NE: (1, -1),
-                Direction.SE: (1, 1),
-                Direction.E: (1, 0),
-                Direction.SW: (0, 1),
-                Direction.NW: (0, -1)
-            }
-        delta_col, delta_row = offsets[direction]
-        unit.col += delta_col
-        unit.row += delta_row
-        self.set_tile_affiliation(self.tiles[unit.col][unit.row], unit)
-
-    def set_tile_affiliation(self, tile: "Tile", unit: "Unit"):
-        tile.set_affiliation(unit.team)
-
 # Define the Unit class
 class Unit:
-    def __init__(self, col: int, row: int, team: Team, simulation_controller: "SimulationController"):
+    def __init__(self, col: int, row: int, team: Team, speed: int, simulation_controller: "SimulationController"):
         """
         Initializes a Unit with its location and team affiliation.
 
@@ -92,8 +31,16 @@ class Unit:
         self.col = col
         self.row = row
         self.team = team
+        self.speed = speed
         self.simulation_controller = simulation_controller
         self.simulation_controller.add_unit(self)
+        # Movement variables
+        self.is_moving = False
+        self.move_progress = 0.0
+        self.start_tile = (col, row)
+        self.target_tile = (col, row)
+        self.move_duration = 0  # in milliseconds
+        self.elapsed_time = 0
 
     def move(self, direction: Direction):
         """
@@ -112,24 +59,6 @@ class Unit:
             str: A string in the format "Unit at (col, row), team: team_value"
         """
         return f"Unit at ({self.col}, {self.row}), team: {self.team.value}"
-
-class TeamController:
-    def __init__(self, team: Team):
-        self.team = team
-        self.units = []
-        self.simulation_controller = None
-
-    def add_unit(self, unit: Unit):
-        if unit.team != self.team:
-            raise ValueError(f"Cannot add unit of team {unit.team} to controller of team {self.team}")
-        self.units.append(unit)
-
-    def move_units_randomly(self):
-        """Move all units to a random adjacent hex."""
-        directions = list(Direction)  # Get all possible directions (N, NE, SE, S, SW, NW)
-        for unit in self.units:
-            random_direction = random.choice(directions)  # Pick a random direction
-            unit.move(random_direction)  # Move the unit in that direction
 
 class Tile:
     """

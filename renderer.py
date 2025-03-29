@@ -2,7 +2,30 @@ import math
 import pygame
 from game_objects import Team, Unit, Tile
 import gamelogic
+import json
 
+def load_config(filename):
+    """
+    Loads a JSON file and returns a dictionary of config values.
+    """
+    with open(filename, 'r') as f:
+        return json.load(f)
+
+class RenderController:
+    def __init__(self, screen: pygame.Surface, fps: int, hex_size: int, tiles: list[list[Tile]], units: list[Unit]):
+        self.screen = screen
+        self.fps = fps
+        self.hex_size = hex_size
+        self.font = pygame.font.Font(None, int(hex_size / 2))
+        self.tiles = tiles
+        self.units = units
+
+    def draw_map(self):
+        self.screen.fill((255, 255, 255))  # White background
+        draw_tiles(self.screen, self.tiles, self.hex_size, self.font)
+        draw_units(self.screen, self.units, self.hex_size)
+        render_affiliation_stats(self.screen, self.tiles, self.font, (1500, 1000))
+        
 def hex_corners(center_x, center_y, size):
     """
     Returns the list of (x, y) corner coordinates for a pointy-top hex
@@ -76,18 +99,62 @@ def draw_tiles(surface: pygame.Surface, tiles: list[list[Tile]], size: float, fo
             surface.blit(text, text_rect)
 
 def draw_units(surface: pygame.Surface, units: list[Unit], size: float) -> None:
-    """
-    Draws units on the hex grid as colored circles.
-
-    Args:
-        surface (pygame.Surface): The Pygame surface to draw on.
-        units (list[Unit]): List of Unit instances to draw.
-        size (float): Radius of the hex, used to scale the unit circle.
-    """
     for unit in units:
-        center_x, center_y = get_hex_center(unit.col, unit.row, size)
         color = (0, 0, 255) if unit.team == Team.BLUE else (255, 0, 0)
-        pygame.draw.rect(surface, color, (int(center_x)-int(size/2), int(center_y)-int(size/2), int(size), int(size)))
+        if unit.is_moving:
+            # Determine the center positions of the starting and target hexes.
+            start_center = get_hex_center(unit.start_tile[0], unit.start_tile[1], size)
+            target_center = get_hex_center(unit.target_tile[0], unit.target_tile[1], size)
+            
+            # Draw the unit's rectangle at its starting position.
+            pygame.draw.rect(surface, color, 
+                             (int(start_center[0]) - int(size/2), int(start_center[1]) - int(size/2), 
+                              int(size), int(size)))
+            
+            # Define arrow color as green.
+            arrow_color = (0, 255, 0)
+            
+            # Draw a thin arrow line from the start to the target.
+            pygame.draw.line(surface, arrow_color, 
+                             (int(start_center[0]), int(start_center[1])), 
+                             (int(target_center[0]), int(target_center[1])), 2)
+            
+            # Calculate the progress tip based on move_progress.
+            progress_tip_x = start_center[0] + (target_center[0] - start_center[0]) * unit.move_progress
+            progress_tip_y = start_center[1] + (target_center[1] - start_center[1]) * unit.move_progress
+            
+            # Draw a thick line from the start to the current progress tip.
+            progress_line_thickness = 8  # Adjust thickness as needed.
+            pygame.draw.line(surface, arrow_color, 
+                             (int(start_center[0]), int(start_center[1])), 
+                             (int(progress_tip_x), int(progress_tip_y)), 
+                             progress_line_thickness)
+            
+            # --- Draw the arrow head at the target ---
+            # Compute the angle from start to target.
+            dx = target_center[0] - start_center[0]
+            dy = target_center[1] - start_center[1]
+            angle = math.atan2(dy, dx)
+            arrow_head_length = 10  # Length of the arrowhead lines.
+            # Set angles for the arrowhead (adjust the offset angle as desired).
+            offset_angle = math.pi / 6  # 30 degrees offset
+            left_angle = angle + offset_angle
+            right_angle = angle - offset_angle
+            left_point = (target_center[0] - arrow_head_length * math.cos(left_angle),
+                          target_center[1] - arrow_head_length * math.sin(left_angle))
+            right_point = (target_center[0] - arrow_head_length * math.cos(right_angle),
+                           target_center[1] - arrow_head_length * math.sin(right_angle))
+            pygame.draw.line(surface, arrow_color, (int(target_center[0]), int(target_center[1])),
+                             (int(left_point[0]), int(left_point[1])), 2)
+            pygame.draw.line(surface, arrow_color, (int(target_center[0]), int(target_center[1])),
+                             (int(right_point[0]), int(right_point[1])), 2)
+        else:
+            # For units that are not moving, draw them at their current grid center.
+            center = get_hex_center(unit.col, unit.row, size)
+            pygame.draw.rect(surface, color, 
+                             (int(center[0]) - int(size/2), int(center[1]) - int(size/2), 
+                              int(size), int(size)))
+
 
 def render_affiliation_stats(
     surface: pygame.Surface, 

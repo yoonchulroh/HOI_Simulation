@@ -1,4 +1,3 @@
-import json
 import game_objects
 
 def is_move_valid(unit: "game_objects.Unit", direction: "game_objects.Direction", rows: int, cols: int) -> bool:

@@ -1,5 +1,31 @@
 import json
-from game_objects import Team, Unit, TeamController, SimulationController, Tile
+from game_objects import Team, Unit, Tile
+from controllers import TeamController, SimulationController
+import pygame
+
+def load_config(filename):
+    """
+    Loads a JSON file and returns a dictionary of config values.
+    """
+    with open(filename, 'r') as f:
+        return json.load(f)
+
+
+def initialize_simulation(config_filename: str):
+    config = load_config(config_filename)
+
+    # 2) Extract config values
+    window_width = config.get("window_width", 800)
+    window_height = config.get("window_height", 600)
+    fps = config.get("fps", 60)
+    hex_size = config.get("hex_size", 40)
+
+     # Initialize Pygame
+    pygame.init()
+    screen = pygame.display.set_mode((window_width, window_height))
+    pygame.display.set_caption("Hex Grid Visualization (Pygame)")
+
+    return screen, fps, hex_size
 
 def load_units_from_json(json_file: str, blue_controller: TeamController, red_controller: TeamController, simulation_controller: SimulationController):
     units = []
@@ -26,8 +52,9 @@ def load_units_from_json(json_file: str, blue_controller: TeamController, red_co
             col = unit_data['col']
             row = unit_data['row']
             team_str = unit_data['team']
+            speed = unit_data['speed']
             team = Team(team_str)  # Automatically raises ValueError if team_str is invalid
-            unit = Unit(col, row, team, simulation_controller)
+            unit = Unit(col, row, team, speed, simulation_controller)
             if team == Team.BLUE:
                 blue_controller.add_unit(unit)
             elif team == Team.RED:
